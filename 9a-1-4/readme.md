@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>單位圓：正弦與餘弦動態示範</title>
+<style>
+  :root{--navy:#1F3A6E;--red:#C0392B;--org:#D98200;--bg:#F7F9FC;--edge:#34508F;--fill:#E3EEFA;--c30:#D0392B;--c45:#1E9E48;--c60:#7B2FBE}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:#222}
+  .wrap{max-width:860px;margin:0 auto;padding:18px 16px 28px}
+  h1{font-size:22px;color:var(--navy);margin:4px 0 12px}
+  .stage{background:#fff;border:1px solid #D8E0EC;border-radius:14px;position:relative;overflow:hidden;touch-action:none}
+  svg{display:block;width:100%;height:auto;max-height:66vh}
+  .hud{position:absolute;right:16px;top:12px;font-size:15px;line-height:1.5;pointer-events:none;text-align:left}
+  .hud .ang{color:var(--navy);font-weight:700;font-size:20px;font-family:"Times New Roman","PingFang TC",serif}
+  .hud .row{font-family:"Times New Roman","PingFang TC","Noto Sans TC",serif;font-size:22px;font-weight:700;margin-top:4px;display:flex;align-items:center;gap:6px}
+  .hud .sin{color:var(--red)} .hud .cos{color:var(--org)}
+  .hud .tag{font-family:"PingFang TC","Noto Sans TC",sans-serif;font-size:14px;font-weight:400;opacity:.85}
+  .m{font-family:"Times New Roman",serif;font-style:italic}
+  .fr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;font-size:.8em;line-height:1.05;margin:0 2px}
+  .fr>span:first-child{border-bottom:2px solid currentColor;padding:0 3px}
+  .sq{border-top:1.5px solid currentColor;padding-left:1px;margin-left:1px}
+  .ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
+  button{font:inherit;font-size:15px;padding:8px 14px;border-radius:10px;border:1px solid #B9C6DA;background:#fff;color:var(--navy);cursor:pointer}
+  button:hover{background:#EEF3FA}
+  button.primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+  button.primary:hover{background:#2C4C86}
+  button.q30{color:var(--c30)} button.q45{color:var(--c45)} button.q60{color:var(--c60)}
+  .slider{flex:1 1 260px;display:flex;align-items:center;gap:10px}
+  input[type=range]{flex:1;accent-color:var(--navy)}
+  .marks{position:relative;height:18px;font-size:12px;color:#667;margin:2px 8px 0 8px}
+  .marks span{position:absolute;transform:translateX(-50%)}
+  table{margin-top:16px;border-collapse:collapse;width:100%;background:#fff;border-radius:12px;overflow:hidden;font-size:17px}
+  th,td{border:1px solid #D8E0EC;padding:8px 6px;text-align:center}
+  th{background:var(--navy);color:#fff;font-weight:700}
+  td{font-family:"Times New Roman","PingFang TC",serif}
+  tr.on td{background:#FFF6D9;font-weight:700}
+  .note{margin-top:12px;font-size:15px;color:#333;line-height:1.7}
+  .note b.s{color:var(--red)} .note b.c{color:var(--org)}
+  .hint{font-size:13px;color:#667;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>單位圓：正弦 ⇒ 高度，餘弦 ⇒ 寬度</h1>
+  <div class="stage" id="stage">
+    <svg id="svg" viewBox="-70 -40 560 470" aria-label="單位圓動態圖"></svg>
+    <div class="hud">
+      <div class="ang" id="angTxt"></div>
+      <div class="row sin" id="sinTxt"></div>
+      <div class="row cos" id="cosTxt"></div>
+    </div>
+  </div>
+  <div class="hint">拖曳圓上的黑點，或用下面的滑桿改變角度。</div>
+  <div class="ctrl">
+    <button id="prev">◀ 上一個</button>
+    <button class="primary" id="play">▶ 播放</button>
+    <button id="next">下一個 ▶</button>
+    <button class="q30" data-a="30">30°</button>
+    <button class="q45" data-a="45">45°</button>
+    <button class="q60" data-a="60">60°</button>
+    <button id="reset">重設</button>
+  </div>
+  <div class="ctrl slider">
+    <input type="range" id="t" min="0" max="90" step="1" value="0" aria-label="角度">
+  </div>
+  <div class="marks"><span style="left:0%">0°</span><span style="left:33.33%">30°</span><span style="left:50%">45°</span><span style="left:66.67%">60°</span><span style="left:100%">90°</span></div>
+  <table>
+    <tr><th>角度</th><th>sin（高度）</th><th>cos（寬度）</
