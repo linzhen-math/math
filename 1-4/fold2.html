@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>對摺兩次：動態示範</title>
+<style>
+  :root{--navy:#1F3A6E;--red:#B03A2E;--ora:#F2B84E;--ora2:#F7D9A0;--bg:#F7F9FC;--line:#2B2B2B}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:#222}
+  .wrap{max-width:860px;margin:0 auto;padding:18px 16px 28px}
+  h1{font-size:22px;color:var(--navy);margin:4px 0 4px}
+  .sub{color:#555;font-size:14px;margin:0 0 12px}
+  .stage{background:#fff;border:1px solid #D8E0EC;border-radius:14px;position:relative;overflow:hidden;touch-action:none}
+  svg{display:block;width:100%;height:auto;cursor:grab}
+  svg:active{cursor:grabbing}
+  .hud{position:absolute;left:14px;top:12px;font-size:15px;line-height:1.6;pointer-events:none}
+  .hud .step{color:var(--navy);font-weight:700;font-size:18px}
+  .hud .lay{color:var(--red);font-weight:700;font-size:20px}
+  .hint{position:absolute;right:12px;bottom:10px;font-size:12px;color:#8A94A6;pointer-events:none}
+  .ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
+  button{font:inherit;font-size:15px;padding:8px 14px;border-radius:10px;border:1px solid #B9C6DA;background:#fff;color:var(--navy);cursor:pointer}
+  button:hover{background:#EEF3FA}
+  button.primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+  button.primary:hover{background:#2C4C86}
+  button.on{background:#FFF1D6;border-color:#E6B65A;color:#7A4A00}
+  .slider{flex:1 1 260px;display:flex;align-items:center;gap:10px}
+  input[type=range]{flex:1;accent-color:var(--navy)}
+  .marks{display:flex;justify-content:space-between;font-size:12px;color:#667;margin:2px 4px 0 4px}
+  .note{margin-top:14px;font-size:14px;color:#444;background:#fff;border:1px solid #E3E8F0;border-radius:10px;padding:10px 14px;line-height:1.7}
+  .note b{color:var(--navy)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>對摺兩次：紙會變成幾層？</h1>
+  <p class="sub">拖曳滑桿或按「下一步」一步一步摺；在圖上按住拖曳可以轉動角度看。</p>
+  <div class="stage" id="stage">
+    <svg id="svg" viewBox="-300 -200 600 380" aria-label="摺紙動態圖"></svg>
+    <div class="hud"><div class="step" id="stepTxt">一張紙</div><div class="lay" id="layTxt">1 層</div></div>
+    <div class="hint">按住拖曳可轉動視角</div>
+  </div>
+  <div class="ctrl">
+    <button id="prev">◀ 上一步</button>
+    <button class="primary" id="play">▶ 播放</button>
+    <button id="next">下一步 ▶</button>
+    <button id="unfold">攤開檢驗</button>
+    <button id="reset">重設</button>
+  </div>
+  <div class="ctrl slider">
+    <input type="range" id="t" min="0" max="200" step="1" value="0" aria-label="摺紙進度">
+  </div>
+  <div class="marks"><span>一張紙</span><span>對摺 1 次</span><span>對摺 2 次</span></div>
+  <div class="note">
+    <b>對摺 1 次</b>：沿橫的對角線，上半往下翻 → 2 層，2¹ = 2。<br>
+    <b>對摺 2 次</b>：沿直的中線，左半往右翻 → 4 層，2² = 4。<br>
+    按「<b>攤開檢驗</b>」把紙攤回原狀：摺痕把紙分成幾塊，就是剛才疊了幾層。
+  </div>
+</div>
+<script>
+(function(){
+  const svg=document.getElementById('svg'), NS='http://www.w3.org/2000/svg';
+  const S=150;
+  const T=[0,S,0],R=[S,0,0],B=[0,-S,0],L=[-S,0,0],O=[0,0,0];
+  const faces=[
+    {id:1,pts:[O,T,R],top:true,left:false},
+    {id:2,pts:[O,R,B],top:false,left:false},
+    {id:3,pts:[O,B,L],top:false,left:true},
+    {id:4,pts:[O,L,T],top:true,left:true},
+  ];
+  let t=0;
+  let yaw=-15*Math.PI/180, pitch=-58*Math.PI/180;
+  let showCrease=0;
+  const ease=x=>x<0?0:x>1?1:(1-Math.cos(Math.PI*x))/2;
+
+  function transform(p,face){
+    let [x,y,z]=p;
+    const a=Math.PI*ease(Math.min(t,100)/100);
+    const b=Math.PI*ease(Math.max(t-100,0)/100);
+    const eps=0.6;
+    if(face.top){ const yy=y*Math.cos(a), zz=y*Math.sin(a)+(a>0?eps:0); y=yy; z=zz; }
+    if(face.left){ const xx=x*Math.cos(b), zz=z*Math.cos(b)-x*Math.sin(b)+(b>0?eps*2:0); x=xx; z=zz; }
+    return [x,y,z];
+  }
+  function view(p){
+    let [x,y,z]=p;
+    let x1=x*Math.cos(yaw)+z*Math.sin(yaw), z1=-x*Math.sin(yaw)+z*Math.cos(yaw);
+    let y2=y*Math.cos(pitch)-z1*Math.sin(pitch), z2=y*Math.sin(pitch)+z1*Math.cos(pitch);
+    const d=900, k=d/(d-z2);
+    return {x:x1*k, y:-y2*k, z:z2};
+  }
+  function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);(parent||svg).appendChild(e);return e;}
+
+  function render(){
+    svg.innerHTML='';
+    const items=faces.map(f=>{
+      const w=f.pts.map(p=>transform(p,f));
+      const v=w.map(view);
+      const ax=v[1].x-v[0].x, ay=v[1].y-v[0].y, bx=v[2].x-v[0].x, by=v[2].y-v[0].y;
+      const cross=ax*by-ay*bx;
+      return {f,v,w,front:cross>0};
+    });
+    items.sort((a,b)=>viewDepth(a)-viewDepth(b));
+    function viewDepth(it){return it.v.reduce((s,p)=>s+p.z,0)/3;}
+    for(const it of items){
+      const d=it.v.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ');
+      const fill=it.front?'var(--ora)':'var(--ora2)';
+      el('polygon',{points:d,fill:fill,stroke:fill,'stroke-width':1.2,'stroke-linejoin':'round'});
+      const P=it.f.pts, V=it.v;
+      const dark=(i,j)=>el('line',{x1:V[i].x,y1:V[i].y,x2:V[j].x,y2:V[j].y,stroke:'#2B2B2B','stroke-width':2.2,'stroke-linecap':'round'});
+      dark(1,2);
+      for(const k of [1,2]){ const q=P[k]; const onLR=q[1]===0, onTB=q[0]===0;
+        if((onLR && t>0) || (onTB && t>100)) dark(0,k); }
+      if(t<6 && showCrease>0){
+        const cx=(it.v[0].x+it.v[1].x+it.v[2].x)/3, cy=(it.v[0].y+it.v[1].y+it.v[2].y)/3;
+        const n = showCrease===1 ? (it.f.top?1:2) : it.f.id;
+        el('text',{x:cx,y:cy+6,'text-anchor':'middle','font-size':20,'font-weight':700,fill:'#7A4A00'}).textContent=n;
+      }
+    }
+    if(t<6 && showCrease>0){
+      const crease=(p,q)=>{const a=view(p),b=view(q);el('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#2B2B2B','stroke-width':2,'stroke-dasharray':'8 6'});};
+      crease(L,R); if(showCrease>=2) crease(T,B);
+    }
+    if(t===0 && showCrease===0) hintFold1();
+    if(t===100) hintFold2();
+    updateText();
+  }
+  function arrow(p,q,bend){
+    const a=view(p), b=view(q);
+    const mx=(a.x+b.x)/2+bend[0], my=(a.y+b.y)/2+bend[1];
+    el('path',{d:`M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}`,fill:'none',stroke:'#1F3A6E','stroke-width':3,'marker-end':'url(#ah)'});
+  }
+  function defs(){
+    const d=el('defs',{});
+    const m=el('marker',{id:'ah',viewBox:'0 0 10 10',refX:8,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'},d);
+    el('path',{d:'M0,0 L10,5 L0,10 z',fill:'#1F3A6E'},m);
+  }
+  function hintFold1(){
+    defs();
+    const a=view(L),b=view(R);
+    el('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#B03A2E','stroke-width':2.5,'stroke-dasharray':'9 6'});
+    arrow([10,S*0.75,0],[10,-S*0.7,0],[60,0]);
+  }
+  function hintFold2(){
+    defs();
+    const a=view([0,0,1]),b=view([0,-S,1]);
+    el('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#B03A2E','stroke-width':2.5,'stroke-dasharray':'9 6'});
+    arrow([-S*0.75,-S*0.15,2],[S*0.7,-S*0.15,2],[0,-70]);
+  }
+  function updateText(){
+    let s,l;
+    if(t>=200){s='對摺 2 次';l='2² = 4 層';}
+    else if(t>100){s='對摺第 2 次中…';l='';}
+    else if(t===100){s='對摺 1 次';l='2¹ = 2 層';}
+    else if(t>0){s=showCrease&&dir<0?'攤開中…':'對摺第 1 次中…';l='';}
+    else if(showCrease===1){s='攤開檢驗：分成 2 塊';l='2 層';}
+    else if(showCrease===2){s='攤開檢驗：分成 4 塊';l='4 層';}
+    else {s='一張紙';l='1 層';}
+    document.getElementById('stepTxt').textContent=s;
+    document.getElementById('layTxt').textContent=l;
+  }
+  const range=document.getElementById('t');
+  function setT(v){t=Math.max(0,Math.min(200,Math.round(v)));range.value=t;
+    if(t>=100) showCrease=Math.max(showCrease,1); if(t>=200) showCrease=2;
+    render();}
+  range.addEventListener('input',()=>{stop(); setT(+range.value);});
+  let raf=null, target=null, dir=1;
+  function animateTo(v){
+    stop(); target=v; dir=v>t?1:-1; let last=performance.now();
+    function step(now){const dt=now-last; last=now;
+      let nt=t+dir*dt*0.09;
+      if((dir>0&&nt>=target)||(dir<0&&nt<=target)){setT(target);raf=null;playBtn.textContent='▶ 播放';return;}
+      setT(nt); raf=requestAnimationFrame(step);}
+    raf=requestAnimationFrame(step);
+  }
+  function stop(){if(raf){cancelAnimationFrame(raf);raf=null;}playBtn.textContent='▶ 播放';}
+  const playBtn=document.getElementById('play');
+  playBtn.onclick=()=>{ if(raf){stop();return;} if(t>=200){showCrease=0;setT(0);} animateTo(200); playBtn.textContent='❚❚ 暫停'; };
+  document.getElementById('next').onclick=()=>{ if(t<100) animateTo(100); else if(t<200) animateTo(200); };
+  document.getElementById('prev').onclick=()=>{ if(t>100) animateTo(100); else if(t>0) animateTo(0); };
+  document.getElementById('unfold').onclick=()=>{ if(t===0 && showCrease===0) return; animateTo(0); };
+  document.getElementById('reset').onclick=()=>{ stop(); showCrease=0; yaw=-15*Math.PI/180; pitch=-58*Math.PI/180; setT(0); };
+  let drag=null;
+  svg.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,yaw,pitch};svg.setPointerCapture(e.pointerId);});
+  svg.addEventListener('pointermove',e=>{ if(!drag) return;
+    yaw=drag.yaw+(e.clientX-drag.x)*0.008;
+    pitch=Math.max(-1.35,Math.min(0.2,drag.pitch+(e.clientY-drag.y)*0.008)); render();});
+  svg.addEventListener('pointerup',()=>drag=null);
+  svg.addEventListener('pointercancel',()=>drag=null);
+  render();
+})();
+</script>
+</body>
+</html>
