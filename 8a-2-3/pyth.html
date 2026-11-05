@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>畢氏定理：拼圖動態示範</title>
+<style>
+  :root{--navy:#1F3A6E;--red:#B03A2E;--bg:#F7F9FC;--edge:#34508F;--tri:#CBD3E1;--a2:#E3EFD9;--b2:#F9E8CF;--c2:#F3D6D9}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:#222}
+  .wrap{max-width:860px;margin:0 auto;padding:18px 16px 28px}
+  h1{font-size:22px;color:var(--navy);margin:4px 0 12px}
+  .stage{background:#fff;border:1px solid #D8E0EC;border-radius:14px;position:relative;overflow:hidden}
+  svg{display:block;width:100%;height:auto;max-height:66vh}
+  .hud{position:absolute;left:14px;top:12px;font-size:15px;line-height:1.6;pointer-events:none}
+  .hud .step{color:var(--navy);font-weight:700;font-size:18px}
+  .hud .lay{color:var(--red);font-weight:700;font-size:22px;font-family:"Times New Roman","PingFang TC","Noto Sans TC",serif}
+  .lay i{font-style:italic}
+  .ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
+  button{font:inherit;font-size:15px;padding:8px 14px;border-radius:10px;border:1px solid #B9C6DA;background:#fff;color:var(--navy);cursor:pointer}
+  button:hover{background:#EEF3FA}
+  button.primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+  button.primary:hover{background:#2C4C86}
+  .slider{flex:1 1 260px;display:flex;align-items:center;gap:10px}
+  input[type=range]{flex:1;accent-color:var(--navy)}
+  .marks{display:flex;justify-content:space-between;font-size:12px;color:#667;margin:2px 4px 0 4px}
+  .m{font-family:"Times New Roman",serif;font-style:italic}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>畢氏定理：兩個小正方形面積和 = 大正方形面積</h1>
+  <div class="stage">
+    <svg id="svg" viewBox="-230 -40 460 420" aria-label="畢氏定理拼圖動態圖"></svg>
+    <div class="hud"><div class="step" id="stepTxt"></div><div class="lay" id="layTxt"></div></div>
+  </div>
+  <div class="ctrl">
+    <button id="prev">◀ 上一步</button>
+    <button class="primary" id="play">▶ 播放</button>
+    <button id="next">下一步 ▶</button>
+    <button id="reset">重設</button>
+  </div>
+  <div class="ctrl slider">
+    <input type="range" id="t" min="0" max="400" step="1" value="0" aria-label="進度">
+  </div>
+  <div class="marks"><span>拼法二</span><span>移動 1</span><span>移動 2</span><span>拼法一</span><span>結論</span></div>
+</div>
+<script>
+(function(){
+  const svg=document.getElementById('svg'), NS='http://www.w3.org/2000/svg';
+  const U=44, a=3, b=4, s=a+b, X0=-s*U/2, Y0=330;
+  const P=([x,y])=>[X0+x*U, Y0-y*U];
+  const tris=[
+    {pts:[[0,0],[3,0],[0,4]], mv:[4,3]},
+    {pts:[[3,0],[7,0],[7,3]], mv:[-3,0]},
+    {pts:[[4,7],[0,7],[0,4]], mv:[0,-4]},
+    {pts:[[7,3],[7,7],[4,7]], mv:[0,0]},
+  ];
+  let t=0;
+  const ease=x=>x<0?0:x>1?1:(1-Math.cos(Math.PI*x))/2;
+  const clamp=x=>Math.max(0,Math.min(1,x));
+
+  function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);(parent||svg).appendChild(e);return e;}
+  function poly(pts,attrs){return el('polygon',Object.assign({points:pts.map(P).map(q=>q.join(',')).join(' ')},attrs));}
+  function mtext(x,y,base,sup,size,op,color){
+    const [px,py]=P([x,y]);
+    const e=el('text',{x:px,y:py,'text-anchor':'middle','dominant-baseline':'central','font-family':'Times New Roman, serif','font-style':'italic','font-size':size,fill:color||'#222',opacity:op});
+    e.appendChild(document.createTextNode(base));
+    if(sup){const ts=document.createElementNS(NS,'tspan');ts.setAttribute('font-size',size*0.6);ts.setAttribute('dy',-size*0.4);ts.textContent=sup;e.appendChild(ts);}
+    return e;
+  }
+
+  const VB0=[-230,-40,460,420], VB1=[-430,-110,712,650];
+  function render(){
+    svg.innerHTML='';
+    const q=ease((t-300)/100);
+    svg.setAttribute('viewBox',VB0.map((v,i)=>v+(VB1[i]-v)*q).join(' '));
+    const c2op=1-clamp(t/20);
+    const abop=clamp((t-280)/20);
+    const gone=1-clamp((t-300)/30);
+    const fin=clamp((t-350)/40);
+    const lab=clamp((t-380)/20);
+    poly([[0,0],[7,0],[7,7],[0,7]],{fill:'#fff',opacity:gone});
+    if(c2op>0){
+      poly([[3,0],[7,3],[4,7],[0,4]],{fill:'var(--c2)',opacity:c2op});
+      mtext(3.5,3.5,'c','2',34,c2op);
+    }
+    if(fin>0){
+      poly([[0,0],[4,3],[1,7],[-3,4]],{fill:'var(--c2)',stroke:'var(--edge)','stroke-width':2.5,opacity:fin});
+    }
+    if(abop>0){
+      const dy=-7*q;
+      poly([[0,3+dy],[4,3+dy],[4,7+dy],[0,7+dy]],{fill:'var(--b2)',stroke:'var(--edge)','stroke-width':q>0?2.5:2,opacity:abop});
+      poly([[4,0],[7,0],[7,3],[4,3]],{fill:'var(--a2)',stroke:'var(--edge)','stroke-width':q>0?2.5:2,opacity:abop});
+    }
+    const list=tris.map((tr,i)=>{
+      const p=i<3?ease((t-i*100)/100):0;
+      return {i,pts:tr.pts.map(([x,y])=>[x+tr.mv[0]*p,y+tr.mv[1]*p]), moving:i<3&&t>i*100&&t<(i+1)*100};
+    });
+    list.filter(o=>!o.moving).forEach(o=>{
+      const keep=o.i===1;
+      poly(o.pts,{fill:keep&&q>0?'#DCE6F5':'var(--tri)',stroke:'var(--edge)','stroke-width':keep&&q>0?2.8:2.2,'stroke-linejoin':'round',opacity:keep?1:gone});
+    });
+    list.filter(o=>o.moving).forEach(o=>poly(o.pts,{fill:'var(--tri)',stroke:'var(--red)','stroke-width':3,'stroke-linejoin':'round'}));
+    poly([[0,0],[7,0],[7,7],[0,7]],{fill:'none',stroke:'var(--edge)','stroke-width':3.5,opacity:gone});
+    if(abop>0){
+      const dy=-7*q;
+      mtext(2,5+dy+0.45*lab,'b','2',34,abop); mtext(5.5,1.5+0.45*lab,'a','2',34,abop);
+    }
+    if(fin>0) mtext(0.5,3.5+0.45*lab,'c','2',34,fin);
+    if(lab>0){
+      const zh=(x,y,s)=>{const [px,py]=P([x,y]);el('text',{x:px,y:py,'text-anchor':'middle','dominant-baseline':'central','font-size':30,'font-weight':700,fill:'#1F3A6E',opacity:lab}).textContent=s;};
+      zh(0.5,3.0,'甲'); zh(2,-2.5,'乙'); zh(5.5,1.0,'丙');
+      const [rx,ry]=P([4,0]), k=0.32*U;
+      el('polyline',{points:`${rx-k},${ry} ${rx-k},${ry-k} ${rx},${ry-k}`,fill:'none',stroke:'var(--edge)','stroke-width':2,opacity:lab});
+      mtext(3.68,1.75,'a','',24,lab); mtext(2.4,0.38,'b','',24,lab); mtext(1.7,0.95,'c','',24,lab);
+    }
+    const l2=c2op, l1=abop*gone;
+    if(l2>0){ mtext(-0.45,5.5,'a','',22,l2); mtext(-0.45,2,'b','',22,l2); mtext(1.5,-0.5,'a','',22,l2); mtext(5,-0.5,'b','',22,l2); }
+    if(l1>0){ mtext(-0.45,5,'b','',22,l1); mtext(-0.45,1.5,'a','',22,l1); mtext(2,-0.5,'b','',22,l1); mtext(5.5,-0.5,'a','',22,l1); }
+    updateText();
+  }
+  function updateText(){
+    let s,l;
+    if(t>=400){s='兩股上的正方形面積和 = 斜邊上的正方形面積';l='丙 + 乙 = 甲，<i>a</i>² + <i>b</i>² = <i>c</i>²';}
+    else if(t>300){s='排成直角三角形…';l='';}
+    else if(t===300){s='拼法一：留下兩個正方形';l='<i>a</i>² + <i>b</i>² = <i>c</i>²';}
+    else if(t===0){s='拼法二：留下一個正方形';l='<i>c</i>²';}
+    else if(t%100===0){s='移動 '+(t/100)+' 個三角形';l='';}
+    else {s='移動三角形中…';l='';}
+    document.getElementById('stepTxt').textContent=s;
+    document.getElementById('layTxt').innerHTML=l;
+  }
+  const range=document.getElementById('t');
+  function setT(v){t=Math.max(0,Math.min(400,Math.round(v)));range.value=t;render();}
+  range.addEventListener('input',()=>{stop();setT(+range.value);});
+  let raf=null,target=null,dir=1;
+  const playBtn=document.getElementById('play');
+  function animateTo(v){
+    stop(); target=v; dir=v>t?1:-1; let last=performance.now();
+    if(target!==t) playBtn.textContent='❚❚ 暫停';
+    function step(now){const dt=now-last; last=now;
+      const nt=t+dir*dt*0.08;
+      if((dir>0&&nt>=target)||(dir<0&&nt<=target)){setT(target);raf=null;playBtn.textContent='▶ 播放';return;}
+      setT(nt); raf=requestAnimationFrame(step);}
+    raf=requestAnimationFrame(step);
+  }
+  function stop(){if(raf){cancelAnimationFrame(raf);raf=null;}playBtn.textContent='▶ 播放';}
+  playBtn.onclick=()=>{ if(raf){stop();return;} if(t>=400) setT(0); animateTo(400); };
+  document.getElementById('next').onclick=()=>{ animateTo(Math.min(400,Math.floor(t/100)*100+100)); };
+  document.getElementById('prev').onclick=()=>{ animateTo(Math.max(0,Math.ceil(t/100)*100-100)); };
+  document.getElementById('reset').onclick=()=>{ stop(); setT(0); };
+  render();
+})();
+</script>
+</body>
+</html>
